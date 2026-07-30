@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define DEFAULT_PORT 4321
 #define DEFAULT_ADDR INADDR_ANY

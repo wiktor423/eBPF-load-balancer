@@ -38,12 +38,16 @@ int main(){
 		destaddr.sin_port = htons(DEFAULT_PORT);
 	}
  	
-	char msg[] = "16"; 
+	for (int i=1; i<=10; i++){
+		char msg[20];
+		snprintf(msg, sizeof(msg), "%d", i);
+		sleep(2);
+		int len = sendto(sockfd, &msg, strlen(msg), 0, (struct sockaddr *)&destaddr, sizeof(destaddr));
 
-	int len = sendto(sockfd, &msg, strlen(msg), 0, (struct sockaddr *)&destaddr, sizeof(destaddr)); 
-	if(len == -1){
-		perror("Failed to send a message"); 
-	}
+    if(len == -1){
+      perror("Failed to send a message"); 
+    }
+  }
 
 	close(sockfd);
 }

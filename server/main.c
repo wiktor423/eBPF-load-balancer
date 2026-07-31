@@ -56,9 +56,9 @@ int main(){
     while(true){
 
         // blocks untill receives sth
-        // https://pubs.opengroup.org/onlinepubs/007904875/functions/recvfrom.html
-        int n = recvfrom(listenfd, buffer, sizeof(buffer), 0, (struct sockaddr*) &cliaddr,  &sizeof_cliaddr);
-
+        // https://pubs.opengroup.org/onlinepubs/007904875/functions/recvfrom.html 
+    int n = recvfrom(listenfd, buffer, sizeof(buffer), 0, (struct sockaddr*) &cliaddr,  &sizeof_cliaddr);
+	
 
         if(n <= 0){
             printf("Empty packet received\n");
@@ -76,7 +76,7 @@ int main(){
         int v = atol(buffer);
 
         int resp = v*v;
-        printf("Received %d bytes of value %d. Squard:%d\n", n, v, resp);
+        printf("Received %d bytes of value %d. Squared:%d\n", n, v, resp);
         
         int out_length = snprintf(out_buffer, OUT_BUFFER_SIZE , "%d", resp);
 

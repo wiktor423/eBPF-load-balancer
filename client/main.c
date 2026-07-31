@@ -7,6 +7,7 @@
 #include <netinet/in.h> 
 #include <stdlib.h>
 #include <stdbool.h> 
+#include <string.h>
 
 #define DEFAULT_PORT 4321 
 #define DEFAULT_ADDR INADDR_ANY 
@@ -26,21 +27,20 @@ int main(){
 	destaddr.sin_family = AF_INET; 
 	
 	if(env_addr){
-		destaddr.sin_addr.s_addr = htons(env_addr);
+		inet_pton(AF_INET, env_addr, &destaddr.sin_addr);
 	}else{
-		destaddr.sin_port = htons(DEFAULT_ADDR);
+		inet_pton(AF_INET, "127.0.0.1", &destaddr.sin_addr);
 	}
 
 	if(env_port){
-		destaddr.sin_addr.s_addr = htonl(env_port);	
+		destaddr.sin_port = htons(atoi(env_port));	
 	}else{
-		destaddr.sin_port = htonl(DEFAULT_PORT);
+		destaddr.sin_port = htons(DEFAULT_PORT);
 	}
  	
-	int number = htonl(4); 
+	char msg[] = "16"; 
 
-
-	int len = sendto(sockfd, &number, sizeof(int), 0, &destaddr, sizeof(destaddr)); 
+	int len = sendto(sockfd, &msg, strlen(msg), 0, (struct sockaddr *)&destaddr, sizeof(destaddr)); 
 	if(len == -1){
 		perror("Failed to send a message"); 
 	}

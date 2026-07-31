@@ -67,7 +67,6 @@ int main(){
         sizeof_cliaddr = sizeof(cliaddr);
         int n = recvfrom(listenfd, buffer, sizeof(buffer), 0, (struct sockaddr*) &cliaddr,  &sizeof_cliaddr);
 
-
         if(n <= 0){
             printf("Empty packet received\n");
             exit(1);
@@ -84,7 +83,7 @@ int main(){
         int v = atol(buffer);
 
         int resp = v*v;
-        printf("Received %d bytes of value %d. Squard:%d\n", n, v, resp);
+        printf("Received %d bytes of value %d. Squared:%d\n", n, v, resp);
         
         int out_length = snprintf(out_buffer, OUT_BUFFER_SIZE , "%d", resp);
 

@@ -1,6 +1,7 @@
 // returns squared value of what datagram sends
 #include <stdio.h>
 #include <strings.h>
+#include <string.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -23,20 +24,26 @@ int main(){
     struct sockaddr_in servaddr;
     struct sockaddr_in cliaddr;
     
-    bzero(&servaddr, sizeof(servaddr));
+    memset(&servaddr, 0, sizeof(servaddr));
     
     // listenfd socket
     listenfd = socket(AF_INET, SOCK_DGRAM, 0); 
     
     servaddr.sin_family = AF_INET; 
     
-    if(env_port){
-        servaddr.sin_addr.s_addr = htonl(inet_addr(env_lsn_addr));
+    if(env_lsn_addr){
+        printf("using ");
+        int ret = inet_pton(AF_INET, env_lsn_addr, &(servaddr.sin_addr));
+        if(ret != 1){
+            printf("could not convert address to network form with inet_pton: %s\n", env_lsn_addr);
+            exit(1);
+        }
+        // servaddr.sin_addr.s_addr = inet_addr(env_lsn_addr);
     } else{
         servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     }
     
-    if(env_lsn_addr) {
+    if(env_port) {
         servaddr.sin_port = htons( (unsigned short) atoi(env_port));
     } else {
         servaddr.sin_port = htons(DEFAULT_PORT);
@@ -47,7 +54,7 @@ int main(){
     
     
     
-    int sizeof_cliaddr = sizeof(cliaddr);
+    int sizeof_cliaddr;
     char buffer[1500];
 
     char out_buffer[OUT_BUFFER_SIZE];
@@ -56,9 +63,9 @@ int main(){
     while(true){
 
         // blocks untill receives sth
-        // https://pubs.opengroup.org/onlinepubs/007904875/functions/recvfrom.html 
-    int n = recvfrom(listenfd, buffer, sizeof(buffer), 0, (struct sockaddr*) &cliaddr,  &sizeof_cliaddr);
-	
+        // https://pubs.opengroup.org/onlinepubs/007904875/functions/recvfrom.html
+        sizeof_cliaddr = sizeof(cliaddr);
+        int n = recvfrom(listenfd, buffer, sizeof(buffer), 0, (struct sockaddr*) &cliaddr,  &sizeof_cliaddr);
 
         if(n <= 0){
             printf("Empty packet received\n");

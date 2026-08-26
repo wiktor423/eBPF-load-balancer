@@ -16,12 +16,13 @@ int load_balance(struct xdp_md* ctx) {
     struct iphdr *ip = data + sizeof(*eth);
     if ((void*)ip + sizeof(*ip) <= data_end) {
     //   bpf_printk("AJPI\n");  
-      if (ip->protocol == IPPROTO_UDP) {
+      if (ip->protocol == IPPROTO_UDP) {  
         struct udphdr *udp = (void*)ip + sizeof(*ip);
         if ((void*)udp + sizeof(*udp) <= data_end) {
             // bpf_printk("JUDIPI\n");
-            
-            bpf_printk("Destination port: %d \n", bpf_ntohs(udp->dest));
+            __u64 timestamp = bpf_ktime_get_ns(); 
+
+            bpf_printk("Destination port: %d  || Packet arrival time: %llu", bpf_ntohs(udp->dest), timestamp);
       }
     }
   }

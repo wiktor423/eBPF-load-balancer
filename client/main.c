@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdbool.h> 
 #include <string.h>
+#include <unistd.h>
 
 #define DEFAULT_PORT 4321 
 #define DEFAULT_ADDR INADDR_ANY 

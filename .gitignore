@@ -55,3 +55,7 @@ dkms.conf
 *.dwo
 
 vmlinux.h
+
+# compiled binaries
+client/client
+server/server

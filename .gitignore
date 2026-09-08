@@ -58,4 +58,6 @@ vmlinux.h
 
 # compiled binaries
 client/client
-server/server
+
+# drawings 
+*.drawio

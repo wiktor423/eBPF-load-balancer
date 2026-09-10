@@ -113,8 +113,6 @@ int load_balance(struct xdp_md* ctx) {
 
             if (ip->ttl <= 1)
               return XDP_DROP;
-
-
             
             __be32 old_saddr = ip->saddr;
             __be32 old_daddr = ip->daddr;
@@ -141,13 +139,49 @@ int load_balance(struct xdp_md* ctx) {
             return XDP_ABORTED;
             
 
+            //Checksum validation 
+            if (rewrite_udp_checksum(udp, old_saddr, new_saddr, old_daddr, new_daddr, old_ports, new_ports) < 0)           
+              return XDP_ABORTED;
+            if (rewrite_ipv4_csum(ip) < 0)
+              return XDP_ABORTED;
+            
+            //New addresses assignment 
+            u8 source_mac[] = LB_MAC_ADDRESS; 
+            for(int i=0; i<6; i++){
+              (eth->h_source)[i] = source_mac[i];
+            }  
+
             u8 dest_mac[] = DEST_MAC_ADDRESS; 
             for(int i=0; i<6; i++){
               (eth->h_dest)[i] = dest_mac[i];
             }            
 
+            ip->saddr = new_saddr; 
+            ip->daddr = new_daddr; 
             
-            bpf_printk("Just before XDP_TX");
+            udp->source = new_sport;
+            udp->dest = new_dport;
+            
+            bpf_printk("============================\n");
+
+            bpf_printk("SOURCE MAC ADDRESS: ");
+            for(int i=0; i<6; i++){
+              bpf_printk("%x:", eth->h_source[i]);
+            }
+            bpf_printk("\n");                        
+
+            bpf_printk("DESTINATION MAC ADDRESS: ");
+            for(int i=0; i<6; i++){
+              bpf_printk("%x:", eth->h_dest[i]);
+            } 
+            bpf_printk("\n");
+
+            bpf_printk("SOURCE IP %d\n", ip->saddr);
+            bpf_printk("DESTINATION IP: %d\n", ip->daddr);
+
+            bpf_printk("SOURCE PORT %d\n", udp->source);
+            bpf_printk("DESTINATION PORT: %d\n", udp->dest);
+
             return XDP_TX;
             // __u64 val = 1;
 

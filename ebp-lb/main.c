@@ -117,6 +117,10 @@ int load_balance(struct xdp_md* ctx) {
             __be32 old_saddr = ip->saddr;
             __be32 old_daddr = ip->daddr;
 
+            bpf_printk("OLD SOURCE ADDRESS: %d\n", old_saddr);
+            bpf_printk("OLD DESTINATION ADDRESS: %d\n", old_saddr); 
+
+
             __u32 old_ports;
             __builtin_memcpy(&old_ports,&udp->source,sizeof(old_ports));
 
@@ -168,6 +172,7 @@ int load_balance(struct xdp_md* ctx) {
             for(int i=0; i<6; i++){
               bpf_printk("%x:", eth->h_source[i]);
             }
+
             bpf_printk("\n");                        
 
             bpf_printk("DESTINATION MAC ADDRESS: ");

@@ -151,12 +151,16 @@ int load_balance(struct xdp_md* ctx) {
             
             //New addresses assignment 
             u8 source_mac[] = LB_MAC_ADDRESS; 
+            bpf_printk("old h_source:");
             for(int i=0; i<6; i++){
+              bpf_printk("%x:", eth->h_source[i]);
               (eth->h_source)[i] = source_mac[i];
             }  
 
             u8 dest_mac[] = DEST_MAC_ADDRESS; 
+            bpf_printk("old h_dest:");
             for(int i=0; i<6; i++){
+              bpf_printk("%x:", eth->h_dest[i]);
               (eth->h_dest)[i] = dest_mac[i];
             }            
 

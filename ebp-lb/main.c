@@ -114,6 +114,8 @@ int load_balance(struct xdp_md* ctx) {
             if (ip->ttl <= 1)
               return XDP_DROP;
 
+
+            
             __be32 old_saddr = ip->saddr;
             __be32 old_daddr = ip->daddr;
 
@@ -144,7 +146,7 @@ int load_balance(struct xdp_md* ctx) {
             }            
 
             
-            
+            bpf_printk("Just before XDP_TX");
             return XDP_TX;
             // __u64 val = 1;
 

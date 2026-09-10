@@ -118,7 +118,7 @@ int load_balance(struct xdp_md* ctx) {
             __be32 old_daddr = ip->daddr;
 
             bpf_printk("OLD SOURCE ADDRESS: %d\n", old_saddr);
-            bpf_printk("OLD DESTINATION ADDRESS: %d\n", old_saddr); 
+            bpf_printk("OLD DESTINATION ADDRESS: %d\n", old_daddr); 
 
 
             __u32 old_ports;

@@ -108,6 +108,8 @@ int load_balance(struct xdp_md* ctx) {
             if(dst_port != 6767){
               return XDP_PASS; 
             }
+            
+            bpf_printk("We are on the port 6767");
 
             if (ip->ttl <= 1)
               return XDP_DROP;
@@ -142,7 +144,7 @@ int load_balance(struct xdp_md* ctx) {
             }            
 
             
-            bpf_printk("Just before XDP_TX");
+            
             return XDP_TX;
             // __u64 val = 1;
 
@@ -159,8 +161,8 @@ int load_balance(struct xdp_md* ctx) {
     }
   }
   }
-  
-  bpf_printk("Just before XDP_TX");
+
+  //bpf_printk("Just before XDP_TX");
   return XDP_PASS;
 }
 

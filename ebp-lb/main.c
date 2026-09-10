@@ -135,12 +135,6 @@ int load_balance(struct xdp_md* ctx) {
             __u32 new_ports;
             __builtin_memcpy( (void*) &new_ports, &new_sport, sizeof(new_sport));
             __builtin_memcpy( (((void*) &new_ports)+2), &new_dport, sizeof(new_dport));
-
-        
-            if (rewrite_udp_checksum(udp, old_saddr, new_saddr, old_daddr, new_daddr, old_ports, new_ports) < 0)
-            return XDP_ABORTED;
-            if (rewrite_ipv4_csum(ip) < 0)
-            return XDP_ABORTED;
             
             //New addresses assignment 
             u8 source_mac[] = LB_MAC_ADDRESS; 

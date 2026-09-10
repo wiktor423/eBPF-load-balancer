@@ -71,7 +71,6 @@ static __always_inline int rewrite_udp_checksum(
 
     udp-> check = csum_fold((__u32) csum);
     
-
     // RFC768 requires 0 to be transmited as all ones
     if (udp->check == 0)
       udp->check=0xffff;
@@ -130,8 +129,7 @@ int load_balance(struct xdp_md* ctx) {
             __u32 new_ports;
             __builtin_memcpy(&new_ports, &udp->source, sizeof(new_ports));
 
-
-            
+        
             if (rewrite_udp_checksum(udp, old_saddr, new_saddr, old_daddr, new_daddr, old_ports, new_ports) < 0)
             return XDP_ABORTED;
             if (rewrite_ipv4_csum(ip) < 0)
@@ -144,7 +142,7 @@ int load_balance(struct xdp_md* ctx) {
             }            
 
             
-
+            bpf_printk("Just before XDP_TX");
             return XDP_TX;
             // __u64 val = 1;
 
@@ -161,6 +159,8 @@ int load_balance(struct xdp_md* ctx) {
     }
   }
   }
+  
+  bpf_printk("Just before XDP_TX");
   return XDP_PASS;
 }
 

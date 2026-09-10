@@ -142,13 +142,6 @@ int load_balance(struct xdp_md* ctx) {
             if (rewrite_ipv4_csum(ip) < 0)
             return XDP_ABORTED;
             
-
-            //Checksum validation 
-            if (rewrite_udp_checksum(udp, old_saddr, new_saddr, old_daddr, new_daddr, old_ports, new_ports) < 0)           
-              return XDP_ABORTED;
-            if (rewrite_ipv4_csum(ip) < 0)
-              return XDP_ABORTED;
-            
             //New addresses assignment 
             u8 source_mac[] = LB_MAC_ADDRESS; 
             bpf_printk("old h_source:");
@@ -169,6 +162,12 @@ int load_balance(struct xdp_md* ctx) {
             
             udp->source = new_sport;
             udp->dest = new_dport;
+
+              //Checksum validation 
+            if (rewrite_udp_checksum(udp, old_saddr, new_saddr, old_daddr, new_daddr, old_ports, new_ports) < 0)           
+              return XDP_ABORTED;
+            if (rewrite_ipv4_csum(ip) < 0)
+              return XDP_ABORTED;
             
             bpf_printk("============================\n");
 

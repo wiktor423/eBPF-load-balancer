@@ -122,7 +122,7 @@ int load_balance(struct xdp_md* ctx) {
             __u32 old_ports;
             __builtin_memcpy(&old_ports,&udp->source,sizeof(old_ports));
 
-            __be32 new_saddr = LB_IP_ADDRESS; 
+            __be32 new_saddr = bpf_htonl(LB_IP_ADDRESS); 
             __be32 new_daddr = bpf_htonl(DEST_IP_ADDRESS);
 
             __be16 new_sport = bpf_htons(6868);

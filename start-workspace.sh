@@ -24,15 +24,16 @@ EBPF_CMD="cd '$ROOT/ebp-lb' \
 
 # Start fresh
 tmux kill-session -t "$SESSION" 2>/dev/null || true
-tmux new-session -d -s "$SESSION" -c "$ROOT/server"
+# Use pane IDs rather than numeric indexes so base-index/pane-base-index don't matter
+PANE_SERVER=$(tmux new-session -d -s "$SESSION" -c "$ROOT/server" -P -F '#{pane_id}')
 
-# Layout: pane 0 = left 25%, pane 1 = middle 50%, pane 2 = right 25%
-tmux split-window -h -l 75% -t "$SESSION:0.0" -c "$ROOT/ebp-lb"
-tmux split-window -h -l 33% -t "$SESSION:0.1" -c "$ROOT/client"
+# Layout: server = left 25%, ebpf = middle 50%, client = right 25%
+PANE_EBPF=$(tmux split-window -h -l 75% -t "$PANE_SERVER" -c "$ROOT/ebp-lb" -P -F '#{pane_id}')
+PANE_CLIENT=$(tmux split-window -h -l 33% -t "$PANE_EBPF" -c "$ROOT/client" -P -F '#{pane_id}')
 
-tmux send-keys -t "$SESSION:0.0" "$SERVER_CMD" C-m
-tmux send-keys -t "$SESSION:0.1" "$EBPF_CMD" C-m
-tmux send-keys -t "$SESSION:0.2" "$CLIENT_CMD" C-m
+tmux send-keys -t "$PANE_SERVER" "$SERVER_CMD" C-m
+tmux send-keys -t "$PANE_EBPF" "$EBPF_CMD" C-m
+tmux send-keys -t "$PANE_CLIENT" "$CLIENT_CMD" C-m
 
-tmux select-pane -t "$SESSION:0.1"
+tmux select-pane -t "$PANE_EBPF"
 tmux attach -t "$SESSION"

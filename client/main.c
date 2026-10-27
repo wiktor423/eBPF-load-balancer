@@ -50,5 +50,20 @@ int main(){
     }
   }
 
-	close(sockfd);
+  char reply[1000];
+  struct sockaddr_in from;
+  socklen_t fromlen = sizeof(from);
+
+  int n = recvfrom(sockfd, reply, sizeof(reply)-1, 0, (struct *sockaddr)&from, &fromlen); 
+  if(n < 0) {
+	perror("recfrom error");
+  }
+  else {
+	reply[n] = '\n'; 
+	char ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &from.sin_addr, ip, sizeof(ip));
+    printf("sent %s, received %s from %s:%d\n", msg, reply, ip, ntohs(from.sin_port));
+  }
+
+  close(sockfd);
 }

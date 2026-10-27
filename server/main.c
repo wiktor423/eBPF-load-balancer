@@ -17,11 +17,10 @@
 int main(){
     const char* env_port = getenv("SRV_PORT");
     const char* env_lsn_addr = getenv("SRV_LSN_ADDR");
-
     
     int listenfd;
     
-    struct sockaddr_in servaddr;
+    struct sockaddr_in servaddr;    
     struct sockaddr_in cliaddr;
     
     memset(&servaddr, 0, sizeof(servaddr));
@@ -49,11 +48,9 @@ int main(){
         servaddr.sin_port = htons(DEFAULT_PORT);
     }
     
-    //  bind
+    //bind
     bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr) );
-    
-    
-    
+
     int sizeof_cliaddr;
     char buffer[1500];
 

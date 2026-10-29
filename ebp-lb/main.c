@@ -168,19 +168,19 @@ int load_balance(struct xdp_md* ctx) {
             if (rewrite_ipv4_csum(ip) < 0)
               return XDP_ABORTED;
             
-            bpf_printk("============================\n");
-            bpf_printk("SOURCE MAC ADDRESS: ");
-            for(int i=0; i<6; i++){
-              bpf_printk("%x:", eth->h_source[i]);
-            }
+            // bpf_printk("============================\n");
+            // bpf_printk("SOURCE MAC ADDRESS: ");
+            // for(int i=0; i<6; i++){
+            //   bpf_printk("%x:", eth->h_source[i]);
+            // }
 
-            bpf_printk("\n");                        
+            // bpf_printk("\n");                        
 
-            bpf_printk("DESTINATION MAC ADDRESS: ");
-            for(int i=0; i<6; i++){
-              bpf_printk("%x:", eth->h_dest[i]);
-            } 
-            bpf_printk("\n");
+            // bpf_printk("DESTINATION MAC ADDRESS: ");
+            // for(int i=0; i<6; i++){
+            //   bpf_printk("%x:", eth->h_dest[i]);
+            // } 
+            // bpf_printk("\n");
 
             bpf_printk("SOURCE IP %d\n", ip->saddr);
             bpf_printk("DESTINATION IP: %d\n", ip->daddr);

@@ -182,11 +182,12 @@ int load_balance(struct xdp_md* ctx) {
             // } 
             // bpf_printk("\n");
 
-            bpf_printk("SOURCE IP %d\n", ip->saddr);
-            bpf_printk("DESTINATION IP: %d\n", ip->daddr);
 
-            bpf_printk("SOURCE PORT %d\n", udp->source);
-            bpf_printk("DESTINATION PORT: %d\n", udp->dest);
+            bpf_printk("SOURCE IP %d\n", bpf_ntohl(ip->saddr));
+            bpf_printk("DESTINATION IP: %d\n", bpf_ntohl(ip->daddr));
+
+            bpf_printk("SOURCE PORT %d\n", bpf_ntohs(udp->source));
+            bpf_printk("DESTINATION PORT: %d\n",  bpf_ntohs(udp->dest));
 
             return XDP_TX;
       }

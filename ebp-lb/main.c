@@ -7,14 +7,20 @@
 #define IP_OFFSET   0x1FFF
 
 #define MAX_PATH 256
+
 /*u8[6]*/
-#define DEST_MAC_ADDRESS {0xbc, 0x24, 0x11, 0x70, 0x42, 0xc4}
+#define SERV_MAC_ADDRESS {0xbc, 0x24, 0x11, 0x70, 0x42, 0xc4}
 #define LB_MAC_ADDRESS   {0xbc, 0x24, 0x11, 0x10, 0x30, 0x16}
+#define CLIENT_MAC_ADDRESS {0xbc, 0x24, 0x11, 0x28, 0xf8, 0x53}
+
 /*u32*/   
-#define DEST_IP_ADDRESS 3232235842 
-#define LB_IP_ADDRESS  3232235846 
-/*u16*/ 
-#define BACKEND_PORT 4321
+#define SERV_IP_ADDRESS 3232235842      //192.168.1.66
+#define LB_IP_ADDRESS  3232235846       //192.168.1.70 
+#define CLIENT_IP_ADDRESS 3232235844    //192.168.1.68
+
+/*u16*/
+#define LB_PORT 6767 
+#define BACKEND_PORT 4321 
 
 // counts packets per its desitnation port
 struct {
@@ -79,7 +85,6 @@ static __always_inline int rewrite_udp_checksum(
 }
 
 
-
 SEC("xdp")
 int load_balance(struct xdp_md* ctx) {  
     void *data = (void *)(long)ctx->data;
@@ -93,115 +98,103 @@ int load_balance(struct xdp_md* ctx) {
 
       if(ip->ihl != 5)
         return XDP_PASS; // todo: no support for IPv4 options
-      
-      
+            
       if(ip->frag_off & bpf_htons(IP_MF | IP_OFFSET))
         return XDP_PASS; //todo: no suport for fragments
       
-  
       if (ip->protocol == IPPROTO_UDP) {  
         struct udphdr *udp = (void*)ip + sizeof(*ip);
         if ((void*)udp + sizeof(*udp) <= data_end) {
-            __u64 timestamp = bpf_ktime_get_ns(); 
-            __u16 dst_port = bpf_ntohs(udp->dest);
-            
-            if(dst_port != 6767){
-              return XDP_PASS; 
-            }
-            
-            bpf_printk("We are on the port 6767");
-
             if (ip->ttl <= 1)
               return XDP_DROP;
-            
-            __be32 old_saddr = ip->saddr;
-            __be32 old_daddr = ip->daddr;
+           
+          //__u16 dst_port = bpf_ntohs(udp->dest);
+           __be32 old_saddr = ip->saddr;
+           __be32 old_daddr = ip->daddr;
 
+           __be32 new_daddr;
+           __be16 new_sport = udp->source;   
+           __be16 new_dport = udp->dest;     
+           u8 source_mac[6] = LB_MAC_ADDRESS;  //same for both directions
+           u8 dest_mac[6];   
+
+           /*
+              Reply from the backend comes with the ephemeral port of the client, therefore 
+              there is no need to change or save it 
+           */
+
+            if(bpf_ntohl(old_saddr) == SERV_IP_ADDRESS){
+                new_daddr = bpf_htonl(CLIENT_IP_ADDRESS);
+                new_sport = bpf_htons(LB_PORT); // not sure if we need to do that 
+                __u8 mac[6] = CLIENT_MAC_ADDRESS;
+                __builtin_memcpy(dest_mac, mac, 6);
+            }
+            
+            else if(bpf_ntohl(old_saddr) == CLIENT_IP_ADDRESS){
+                new_daddr = bpf_htonl(SERV_IP_ADDRESS); 
+                new_dport = bpf_htons(BACKEND_PORT);
+                __u8 mac[6] = SERV_MAC_ADDRESS;
+                __builtin_memcpy(dest_mac, mac, 6); 
+            } 
+            
+            // If it is not coming from the client or the backend then pass
+            else{
+              return XDP_PASS;
+            }
+
+            ip->ttl--;
+                       
             bpf_printk("OLD SOURCE ADDRESS: %d\n", old_saddr);
             bpf_printk("OLD DESTINATION ADDRESS: %d\n", old_daddr); 
 
-
             __u32 old_ports;
-            __builtin_memcpy(&old_ports,&udp->source,sizeof(old_ports));
-
-            __be32 new_saddr = bpf_htonl(LB_IP_ADDRESS); 
-            __be32 new_daddr = bpf_htonl(DEST_IP_ADDRESS);
-
-            __be16 new_sport = bpf_htons(6868);
-            __be16 new_dport = bpf_htons(BACKEND_PORT);
-
-            ip->ttl--;
-
-            __u32 new_ports;
-            __builtin_memcpy( (void*) &new_ports, &new_sport, sizeof(new_sport));
-            __builtin_memcpy( (((void*) &new_ports)+2), &new_dport, sizeof(new_dport));
+            __builtin_memcpy(&old_ports,&udp->source,sizeof(old_ports)); // not sure if we need this anymore
+            __be32 new_saddr = bpf_htonl(LB_IP_ADDRESS);   
             
-            //New addresses assignment 
-            u8 source_mac[] = LB_MAC_ADDRESS; 
-            bpf_printk("old h_source:");
-            for(int i=0; i<6; i++){
-              bpf_printk("%x:", eth->h_source[i]);
-              (eth->h_source)[i] = source_mac[i];
-            }  
-
-            u8 dest_mac[] = DEST_MAC_ADDRESS; 
-            bpf_printk("old h_dest:");
-            for(int i=0; i<6; i++){
-              bpf_printk("%x:", eth->h_dest[i]);
-              (eth->h_dest)[i] = dest_mac[i];
-            }            
+            __builtin_memcpy(eth->h_source, source_mac, 6);
+            __builtin_memcpy(eth->h_dest, dest_mac, 6);
 
             ip->saddr = new_saddr; 
             ip->daddr = new_daddr; 
             
             udp->source = new_sport;
             udp->dest = new_dport;
+            __u32 new_ports;
+            __builtin_memcpy(&new_ports, &udp->source, sizeof(new_ports));
 
-              //Checksum validation 
+            //Checksum validation 
             if (rewrite_udp_checksum(udp, old_saddr, new_saddr, old_daddr, new_daddr, old_ports, new_ports) < 0)           
               return XDP_ABORTED;
             if (rewrite_ipv4_csum(ip) < 0)
               return XDP_ABORTED;
             
-            bpf_printk("============================\n");
-
-            bpf_printk("SOURCE MAC ADDRESS: ");
-            for(int i=0; i<6; i++){
-              bpf_printk("%x:", eth->h_source[i]);
-            }
-
-            bpf_printk("\n");                        
-
-            bpf_printk("DESTINATION MAC ADDRESS: ");
-            for(int i=0; i<6; i++){
-              bpf_printk("%x:", eth->h_dest[i]);
-            } 
-            bpf_printk("\n");
-
-            bpf_printk("SOURCE IP %d\n", ip->saddr);
-            bpf_printk("DESTINATION IP: %d\n", ip->daddr);
-
-            bpf_printk("SOURCE PORT %d\n", udp->source);
-            bpf_printk("DESTINATION PORT: %d\n", udp->dest);
-
-            return XDP_TX;
-            // __u64 val = 1;
-
-            // __u64 *cnt = bpf_map_lookup_elem(&udp_pkt_cnt_per_port, &dst_port);
-            // if(cnt){
-            //    __sync_fetch_and_add(cnt,1); // todo: researhc if its the best / most efficient way
-            //    val = *cnt;
-            // }else{
-            //   bpf_map_update_elem(&udp_pkt_cnt_per_port, &dst_port, &val, BPF_ANY);
+            // bpf_printk("============================\n");
+            // bpf_printk("SOURCE MAC ADDRESS: ");
+            // for(int i=0; i<6; i++){
+            //   bpf_printk("%x:", eth->h_source[i]);
             // }
 
-            // bpf_printk("n=%d, dst port: %d  || Arrival: %llu", val, dst_port, timestamp);
+            // bpf_printk("\n");                        
+
+            // bpf_printk("DESTINATION MAC ADDRESS: ");
+            // for(int i=0; i<6; i++){
+            //   bpf_printk("%x:", eth->h_dest[i]);
+            // } 
+            // bpf_printk("\n");
+
+
+            bpf_printk("SOURCE IP %d\n", bpf_ntohl(ip->saddr));
+            bpf_printk("DESTINATION IP: %d\n", bpf_ntohl(ip->daddr));
+
+            bpf_printk("SOURCE PORT %d\n", bpf_ntohs(udp->source));
+            bpf_printk("DESTINATION PORT: %d\n",  bpf_ntohs(udp->dest));
+
+            return XDP_TX;
       }
     }
   }
   }
 
-  //bpf_printk("Just before XDP_TX");
   return XDP_PASS;
 }
 

@@ -22,11 +22,11 @@ EBPF_HOSTNAME="debian03"
 SRV_HOSTNAME="debian05"
 
 # ================================================
-SERVER_CMD="clear; echo ''; echo '';  echo '################'; echo '#### SERVER ####'; echo '################'; echo ''; echo ''; ssh -t -J $JUMPHOST  $SRV_HOSTNAME \"sudo -u debian bash -c 'cd ~/eBPF-load-balancer; git pull; cd server; gcc ./main.c -o server && ./server'\" "
+SERVER_CMD="clear; echo ''; echo '';  echo '################'; echo '#### SERVER ####'; echo '################'; echo ''; echo ''; ssh -t -J $JUMPHOST  $SRV_HOSTNAME \"sudo -u debian bash -c 'cd ~/eBPF-load-balancer; git checkout feature/packet_return && git pull origin feature/packet_return; cd server; gcc ./main.c -o server && ./server'\" "
 
-CLIENT_CMD="clear; echo ''; echo '';  echo '################'; echo '#### CLIENT ####'; echo '################'; echo ''; echo ''; ssh -t -J $JUMPHOST  $CLNT_HOSTNAME \"sudo -u debian bash -c 'cd ~/eBPF-load-balancer; git pull; cd client; gcc ./main.c -o client && SERVER_PORT=6767 SERVER_ADDRESS="192.168.1.70" ./client'\" "
+CLIENT_CMD="clear; echo ''; echo '';  echo '################'; echo '#### CLIENT ####'; echo '################'; echo ''; echo ''; ssh -t -J $JUMPHOST  $CLNT_HOSTNAME \"sudo -u debian bash -c 'cd ~/eBPF-load-balancer; git checkout feature/packet_return && git pull origin feature/packet_return; cd client; gcc ./main.c -o client && SERVER_PORT=6767 SERVER_ADDRESS="192.168.1.70" ./client'\" "
 
-EBPF_CMD="ssh -t -J $JUMPHOST $EBPF_HOSTNAME \"sudo -u debian bash -c 'cd ~/eBPF-load-balancer; git pull; cd ebp-lb; { [ -f vmlinux.h ] || bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h; } && { sudo ip link set dev eth0 xdp off 2>/dev/null || true; } && { sudo ip link set dev eth0 xdp off || true; } && { sudo rm -f /sys/fs/bpf/xdp_loadbalancer || true; } && clang -g -O2 -target bpf -D__TARGET_ARCH_x86 -I . -c main.c -o main.bpf.o && sudo bpftool prog load main.bpf.o /sys/fs/bpf/xdp_loadbalancer autoattach && sudo ip link set dev eth0 xdp pinned /sys/fs/bpf/xdp_loadbalancer && sudo cat /sys/kernel/debug/tracing/trace_pipe' \" "
+EBPF_CMD="ssh -t -J $JUMPHOST $EBPF_HOSTNAME \"sudo -u debian bash -c 'cd ~/eBPF-load-balancer; git checkout feature/packet_return && git pull origin feature/packet_return; cd ebp-lb; { [ -f vmlinux.h ] || bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h; } && { sudo ip link set dev eth0 xdp off 2>/dev/null || true; } && { sudo ip link set dev eth0 xdp off || true; } && { sudo rm -f /sys/fs/bpf/xdp_loadbalancer || true; } && clang -g -O2 -target bpf -D__TARGET_ARCH_x86 -I . -c main.c -o main.bpf.o && sudo bpftool prog load main.bpf.o /sys/fs/bpf/xdp_loadbalancer autoattach && sudo ip link set dev eth0 xdp pinned /sys/fs/bpf/xdp_loadbalancer && sudo cat /sys/kernel/debug/tracing/trace_pipe' \" "
 # ' 
 
 # ================================================

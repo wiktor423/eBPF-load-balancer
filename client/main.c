@@ -43,12 +43,28 @@ int main(){
 		char msg[20];
 		snprintf(msg, sizeof(msg), "%d", i);
 		sleep(2);
-		int len = sendto(sockfd, &msg, strlen(msg), 0, (struct sockaddr *)&destaddr, sizeof(destaddr));
 
-    if(len == -1){
-      perror("Failed to send a message"); 
-    }
-  }
+		int len = sendto(sockfd, msg, strlen(msg), 0, (struct sockaddr *)&destaddr, sizeof(destaddr));
 
-	close(sockfd);
+		if(len == -1){
+			perror("Failed to send a message"); 
+		}
+		
+		char reply[1000];
+		struct sockaddr_in from;
+		socklen_t fromlen = sizeof(from);
+
+		int n = recvfrom(sockfd, reply, sizeof(reply)-1, 0, (struct sockaddr *)&from, &fromlen); 
+		if(n < 0) {
+			perror("recfrom error");
+		}
+		else {
+			reply[n] = '\0'; 
+			char ip[INET_ADDRSTRLEN];
+			inet_ntop(AF_INET, &from.sin_addr, ip, sizeof(ip));
+			printf("sent %s, received %s from %s:%d\n", msg, reply, ip, ntohs(from.sin_port));
+		}
+  	}
+
+  close(sockfd);
 }

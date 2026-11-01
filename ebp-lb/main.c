@@ -240,15 +240,16 @@ int load_balance(struct xdp_md* ctx) {
 
               // 4. dip -> backend_n ip
                 // chosen dynamically
-                new_daddr = bpf_htonl(_choose_backend_ip());
+                new_daddr = _choose_backend_ip();
               
               // 5. dmac -> backend mac
-              prefil_mac_map(); //todo: find a way to do this less often
+                prefil_mac_map(); //todo: find a way to do this less often
                 __u8* mac = _get_mac(new_daddr);
                 if(!mac){
                   bpf_printk("debug: forward branch mac not found");
                   return XDP_PASS;
                 }
+                new_daddr = bpf_htonl(new_daddr);
                   
                 __builtin_memcpy(dest_mac, mac, 6); 
               // 6. smac -> LB_mac

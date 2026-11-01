@@ -209,7 +209,7 @@ int load_balance(struct xdp_md* ctx) {
                 __u32* p_daddr = _get_connection_ip(new_dport); //todo: for now only allows 65 535 connections -> add mapping from sorce ip
                 if (!p_daddr)
                   return XDP_PASS;
-                new_daddr = htons(*p_daddr);
+                new_daddr = bpf_htons(*p_daddr);
 
                 // 5. dmac -> client_n mac
                 prefil_mac_map(); //todo: find a way to do this less often

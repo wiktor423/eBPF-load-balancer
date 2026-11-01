@@ -199,7 +199,7 @@ int load_balance(struct xdp_md* ctx) {
 
 
             if( new_sport == bpf_htons(4321) && _is_backend_ip(bpf_ntohl(old_saddr)) ){
-                bpf_printk("debug: in A");
+                bpf_printk("debug: in return branch");
                 // 1. dport stays the same - EPHEMERAL port from client
                 // 2. sport -> 6767
                 new_sport = bpf_htons(LB_PORT); // not sure if we need to do that 
@@ -209,23 +209,26 @@ int load_balance(struct xdp_md* ctx) {
                 __u32* p_daddr = _get_connection_ip(new_dport); //todo: for now only allows 65 535 connections -> add mapping from sorce ip
                 if (!p_daddr)
                   return XDP_PASS;
-                new_daddr = *p_daddr;
+                new_daddr = htons(*p_daddr);
 
                 // 5. dmac -> client_n mac
                 prefil_mac_map(); //todo: find a way to do this less often
-                __u8* mac = _get_mac(new_daddr);
-                if(!mac)
+                __u8* mac = _get_mac(*p_daddr);
+                if(!mac){
                   return XDP_PASS;
+                  bpf_printk("debug:return branch mac not found");
+                }
                 __builtin_memcpy(dest_mac, mac, 6);
 
                 // 6. smac -> LB_mac
                   // done higher up - same for both dorections
                 
                 // todo: 7. remove connection from maps
+                bpf_printk("debug: out return branch");
             }            
             // forward path: client -> lb
             else if(new_dport == bpf_htons(6767)  && _is_client_ip(bpf_ntohl(old_saddr) ) ){
-              bpf_printk("debug: in B");
+              bpf_printk("debug: in forward branch");
               // 1. dport -> 4321
                 new_dport = bpf_htons(BACKEND_PORT);
               // 2. sport -> stays the same - EPHEMERAL PORT
@@ -242,12 +245,15 @@ int load_balance(struct xdp_md* ctx) {
               // 5. dmac -> backend mac
               prefil_mac_map(); //todo: find a way to do this less often
                 __u8* mac = _get_mac(new_daddr);
-                if(!mac)
+                if(!mac){
+                  bpf_printk("debug: forward branch mac not found");
                   return XDP_PASS;
+                }
                   
                 __builtin_memcpy(dest_mac, mac, 6); 
               // 6. smac -> LB_mac
                   // done higher up - same for both dorections
+              bpf_printk("debug: out forward branch");
             } 
             
             // If it is not coming from the client or the backend then pass

@@ -50,39 +50,26 @@ struct {
     __type(value, __u8[6]); // mac
 } ip_to_mac SEC(".maps");
 
-// normally should probably be a subnet
+// normally should be a CIDR check
 // NOTE: assumes ip is in host byte order (after ntohl)
-// todo: set proper tpye
-static bool __always_inline _is_backend_ip(__u32 ip){
-  return ip == BACKEND1_IP_ADDRESS || ip == BACKEND2_IP_ADDRESS || ip == BACKEND3_IP_ADDRESS;
-}
-static bool __always_inline _is_client_ip(__u32 ip){
-  return ip == CLIENT1_IP_ADDRESS || ip == CLIENT2_IP_ADDRESS;
-}
+// todo: set proper type
+static bool __always_inline _is_backend_ip(__u32 ip){ return ip == BACKEND1_IP_ADDRESS || ip == BACKEND2_IP_ADDRESS || ip == BACKEND3_IP_ADDRESS; }
+static bool __always_inline _is_client_ip(__u32 ip){ return ip == CLIENT1_IP_ADDRESS || ip == CLIENT2_IP_ADDRESS; }
 
-static __always_inline void _set_connection_ip(__u16 dport, __u32 ip){
-  bpf_map_update_elem(&backend_connections, &dport, &ip, BPF_ANY);
-}
-static __always_inline __u32* _get_connection_ip(__u16 dport){
-  return bpf_map_lookup_elem(&backend_connections, &dport);
-}
+static __always_inline void _set_connection_ip(__u16 dport, __u32 ip){ bpf_map_update_elem(&backend_connections, &dport, &ip, BPF_ANY); }
+static __always_inline __u32* _get_connection_ip(__u16 dport){ return bpf_map_lookup_elem(&backend_connections, &dport); }
 
-static  __always_inline int _set_mac(__u32 ip, __u8 mac[6]){
-  return bpf_map_update_elem(&ip_to_mac, &ip, mac, BPF_ANY);
-}
-static __always_inline __u8* _get_mac(__u32 ip){
-  return bpf_map_lookup_elem(&ip_to_mac, &ip);
-}
+static  __always_inline int _set_mac(__u32 ip, __u8 mac[6]){ return bpf_map_update_elem(&ip_to_mac, &ip, mac, BPF_ANY); }
+static __always_inline __u8* _get_mac(__u32 ip){ return bpf_map_lookup_elem(&ip_to_mac, &ip); }
 
 __u64 backend = 0; 
 static __always_inline __u32 _choose_backend_ip(){
-  // todo: implement
+  // round robin
   backend +=1;
   switch (backend)
   {
   case 1:
     return BACKEND1_IP_ADDRESS;
-    /* code */
     break;
   
   default:
@@ -91,16 +78,12 @@ static __always_inline __u32 _choose_backend_ip(){
   }
 }
 
+// hack - we need to have backends' macs inside the map
+// todo: find a way to prefill it once
 static __always_inline void prefil_mac_map(){
-
-  __u8 mac1[6] = BACKEND1_MAC_ADDRESS;
-  _set_mac(BACKEND1_IP_ADDRESS, mac1);
-
-  __u8 mac2[6] = BACKEND2_MAC_ADDRESS;
-  _set_mac(BACKEND2_IP_ADDRESS, mac2);
-
-  __u8 mac3[6] = BACKEND3_MAC_ADDRESS;
-  _set_mac(BACKEND3_IP_ADDRESS, mac3);
+  __u8 mac1[6] = BACKEND1_MAC_ADDRESS; _set_mac(BACKEND1_IP_ADDRESS, mac1);
+  __u8 mac2[6] = BACKEND2_MAC_ADDRESS; _set_mac(BACKEND2_IP_ADDRESS, mac2);
+  __u8 mac3[6] = BACKEND3_MAC_ADDRESS; _set_mac(BACKEND3_IP_ADDRESS, mac3);
 }
 
 static __always_inline __u16 csum_fold(__u32 csum) {
@@ -197,13 +180,7 @@ int load_balance(struct xdp_md* ctx) {
            */
 
             // return path: backend -> lb
-            //  todo: make the check of sport real
-            bpf_printk("debug_vars.  new_sport: %d || old_saddr: %d|| _is_backend_ip= %d", new_sport, old_saddr, _is_backend_ip(bpf_ntohl(old_saddr)));
-            bpf_printk("debug_vars2.  new_dport: %d || old_saddr: %d|| _is_client_ip= %d", new_dport, old_saddr, _is_client_ip(bpf_ntohl(old_saddr)));
-
-
             if( new_sport == bpf_htons(4321) && _is_backend_ip(bpf_ntohl(old_saddr)) ){
-                bpf_printk("debug: in return branch");
                 // 1. dport stays the same - EPHEMERAL port from client
                 // 2. sport -> 6767
                 new_sport = bpf_htons(LB_PORT); // not sure if we need to do that 
@@ -211,19 +188,17 @@ int load_balance(struct xdp_md* ctx) {
                 // 3. sip -> LB_ip - done below
                 // 4. dip -> client_n ip
                 __u32* p_daddr = _get_connection_ip(new_dport); //todo: for now only allows 65 535 connections -> add mapping from sorce ip
-                if (!p_daddr){
-                  bpf_printk("debug:return branch connection not found");
+                if (!p_daddr)
                   return XDP_PASS;
-                }
+
                 new_daddr = *p_daddr;
 
                 // 5. dmac -> client_n mac
                 prefil_mac_map(); //todo: find a way to do this less often
                 __u8* mac = _get_mac(new_dport);
-                if(!mac){
-                  bpf_printk("debug:return branch mac not found");
+                if(!mac)
                   return XDP_PASS;
-                }
+                
                 __builtin_memcpy(dest_mac, mac, 6);
 
                 // 6. smac -> LB_mac
@@ -234,7 +209,6 @@ int load_balance(struct xdp_md* ctx) {
             }            
             // forward path: client -> lb
             else if(new_dport == bpf_htons(6767)  && _is_client_ip(bpf_ntohl(old_saddr) ) ){
-              bpf_printk("debug: in forward branch");
               // 1. dport -> 4321
                 new_dport = bpf_htons(BACKEND_PORT);
               // 2. sport -> stays the same - EPHEMERAL PORT
@@ -243,26 +217,20 @@ int load_balance(struct xdp_md* ctx) {
                 _set_mac(new_sport, eth->h_source);
               
               // 3. sip -> LB_ip - done below
-
-              // 4. dip -> backend_n ip
-                // chosen dynamically
+              // 4. dip -> backend ip
                 new_daddr = _choose_backend_ip();
               
               // 5. dmac -> backend mac
                 prefil_mac_map(); //todo: find a way to do this less often
                 __u8* mac = _get_mac(new_daddr);
-                if(!mac){
-                  bpf_printk("debug: forward branch mac not found");
+                if(!mac)
                   return XDP_PASS;
-                }
                 new_daddr = bpf_htonl(new_daddr);
                   
                 __builtin_memcpy(dest_mac, mac, 6); 
               // 6. smac -> LB_mac
                   // done higher up - same for both dorections
-              bpf_printk("debug: out forward branch");
-            } 
-            
+            }
             // If it is not coming from the client or the backend then pass
             else{
               return XDP_PASS;
@@ -293,21 +261,6 @@ int load_balance(struct xdp_md* ctx) {
               return XDP_ABORTED;
             if (rewrite_ipv4_csum(ip) < 0)
               return XDP_ABORTED;
-            
-            // bpf_printk("============================\n");
-            // bpf_printk("SOURCE MAC ADDRESS: ");
-            // for(int i=0; i<6; i++){
-            //   bpf_printk("%x:", eth->h_source[i]);
-            // }
-
-            // bpf_printk("\n");                        
-
-            // bpf_printk("DESTINATION MAC ADDRESS: ");
-            // for(int i=0; i<6; i++){
-            //   bpf_printk("%x:", eth->h_dest[i]);
-            // } 
-            // bpf_printk("\n");
-
 
             bpf_printk("SOURCE IP %d\n", bpf_ntohl(ip->saddr));
             bpf_printk("DESTINATION IP: %d\n", bpf_ntohl(ip->daddr));

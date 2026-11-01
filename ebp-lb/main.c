@@ -211,14 +211,14 @@ int load_balance(struct xdp_md* ctx) {
                   bpf_printk("debug:return branch connection not found");
                   return XDP_PASS;
                 }
-                new_daddr = bpf_htons(*p_daddr);
+                new_daddr = bpf_htonl(*p_daddr);
 
                 // 5. dmac -> client_n mac
                 prefil_mac_map(); //todo: find a way to do this less often
-                __u8* mac = _get_mac(*p_daddr);
+                __u8* mac = _get_mac(new_dport);
                 if(!mac){
-                  return XDP_PASS;
                   bpf_printk("debug:return branch mac not found");
+                  return XDP_PASS;
                 }
                 __builtin_memcpy(dest_mac, mac, 6);
 

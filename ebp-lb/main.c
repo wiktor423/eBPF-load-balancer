@@ -237,7 +237,7 @@ int load_balance(struct xdp_md* ctx) {
 
               // 4. dip -> backend_n ip
                 // chosen dynamically
-                new_daddr = _choose_backend_ip();
+                new_daddr = bpf_htonl(_choose_backend_ip());
               
               // 5. dmac -> backend mac
               prefil_mac_map(); //todo: find a way to do this less often

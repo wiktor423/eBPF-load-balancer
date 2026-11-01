@@ -82,9 +82,21 @@ static __always_inline __u8* _get_mac(__u32 ip){
   return bpf_map_lookup_elem(&ip_to_mac, &ip);
 }
 
+__u64 backend = 0; 
 static __always_inline __u32 _choose_backend_ip(){
   // todo: implement
-  return BACKEND2_IP_ADDRESS;
+  backend +=1;
+  switch (backend)
+  {
+  case 1:
+    return BACKEND1_IP_ADDRESS;
+    /* code */
+    break;
+  
+  default:
+    backend = 0;
+    return BACKEND2_IP_ADDRESS;
+  }
 }
 
 static __always_inline void prefil_mac_map(){

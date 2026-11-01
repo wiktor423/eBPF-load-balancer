@@ -207,8 +207,10 @@ int load_balance(struct xdp_md* ctx) {
                 // 3. sip -> LB_ip - done below
                 // 4. dip -> client_n ip
                 __u32* p_daddr = _get_connection_ip(new_dport); //todo: for now only allows 65 535 connections -> add mapping from sorce ip
-                if (!p_daddr)
+                if (!p_daddr){
                   return XDP_PASS;
+                  bpf_printk("debug:return branch connection not found");
+                }
                 new_daddr = bpf_htons(*p_daddr);
 
                 // 5. dmac -> client_n mac

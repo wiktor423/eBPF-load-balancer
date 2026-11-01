@@ -32,14 +32,6 @@
 #define LB_PORT 6767 
 #define BACKEND_PORT 4321 
 
-// counts packets per its desitnation port
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(max_entries, 65535);
-    __type(key, __u16);
-    __type(value, __u64);
-} udp_pkt_cnt_per_port SEC(".maps");
-
 // ========================================
 // todo: make it a per-backend map (more connections, etc)
 struct {

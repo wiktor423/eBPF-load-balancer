@@ -211,7 +211,7 @@ int load_balance(struct xdp_md* ctx) {
                   bpf_printk("debug:return branch connection not found");
                   return XDP_PASS;
                 }
-                new_daddr = bpf_htonl(*p_daddr);
+                new_daddr = *p_daddr;
 
                 // 5. dmac -> client_n mac
                 prefil_mac_map(); //todo: find a way to do this less often

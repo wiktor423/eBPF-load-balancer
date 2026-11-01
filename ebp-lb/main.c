@@ -183,6 +183,9 @@ int load_balance(struct xdp_md* ctx) {
 
             // return path: backend -> lb
             //  todo: make the check of sport real
+            bpf_printk("debug_vars.  new_sport: %d || old_saddr: %d|| bpf_ntohl(old_saddr)= %d", new_sport, old_saddr, bpf_ntohl(old_saddr));
+
+
             if( new_sport == bpf_htons(4321) && _is_backend_ip(bpf_ntohl(old_saddr)) ){
                 // 1. dport stays the same - EPHEMERAL port from client
                 // 2. sport -> 6767

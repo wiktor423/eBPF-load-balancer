@@ -87,7 +87,17 @@ static __always_inline __u32 _choose_backend_ip(){
   return BACKEND2_IP_ADDRESS;
 }
 
+static __always_inline void prefil_mac_map(){
 
+  __u8 mac1[6] = BACKEND1_MAC_ADDRESS;
+  _set_mac(BACKEND1_IP_ADDRESS, mac1);
+
+  __u8 mac2[6] = BACKEND2_MAC_ADDRESS;
+  _set_mac(BACKEND2_IP_ADDRESS, mac2);
+
+  __u8 mac3[6] = BACKEND3_MAC_ADDRESS;
+  _set_mac(BACKEND3_IP_ADDRESS, mac3);
+}
 
 static __always_inline __u16 csum_fold(__u32 csum) {
     csum = (csum & 0xffff) + (csum >> 16);
@@ -176,6 +186,7 @@ int load_balance(struct xdp_md* ctx) {
            u8 source_mac[6] = LB_MAC_ADDRESS;  //same for both directions
            u8 dest_mac[6];   
 
+
            /*
               Reply from the backend comes with the ephemeral port of the client, therefore 
               there is no need to change or save it 
@@ -201,6 +212,7 @@ int load_balance(struct xdp_md* ctx) {
                 new_daddr = *p_daddr;
 
                 // 5. dmac -> client_n mac
+                prefil_mac_map(); //todo: find a way to do this less often
                 __u8* mac = _get_mac(new_daddr);
                 if(!mac)
                   return XDP_PASS;
@@ -219,6 +231,7 @@ int load_balance(struct xdp_md* ctx) {
               // 2. sport -> stays the same - EPHEMERAL PORT
                 // but we save mapping port -> client ip
                 _set_connection_ip(new_sport, old_saddr);
+                _set_mac(new_sport, eth->h_source);
               
               // 3. sip -> LB_ip - done below
 
@@ -227,9 +240,11 @@ int load_balance(struct xdp_md* ctx) {
                 new_daddr = _choose_backend_ip();
               
               // 5. dmac -> backend mac
+              prefil_mac_map(); //todo: find a way to do this less often
                 __u8* mac = _get_mac(new_daddr);
                 if(!mac)
                   return XDP_PASS;
+                  
                 __builtin_memcpy(dest_mac, mac, 6); 
               // 6. smac -> LB_mac
                   // done higher up - same for both dorections

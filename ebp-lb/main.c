@@ -184,6 +184,7 @@ int load_balance(struct xdp_md* ctx) {
             // return path: backend -> lb
             //  todo: make the check of sport real
             bpf_printk("debug_vars.  new_sport: %d || old_saddr: %d|| _is_backend_ip= %d", new_sport, old_saddr, _is_backend_ip(bpf_ntohl(old_saddr)));
+            bpf_printk("debug_vars2.  new_dport: %d || old_saddr: %d|| _is_client_ip= %d", new_dport, old_saddr, _is_client_ip(bpf_ntohl(old_saddr)));
 
 
             if( new_sport == bpf_htons(4321) && _is_backend_ip(bpf_ntohl(old_saddr)) ){
@@ -209,8 +210,7 @@ int load_balance(struct xdp_md* ctx) {
                   // done higher up - same for both dorections
                 
                 // todo: 7. remove connection from maps
-            }
-            
+            }            
             // forward path: client -> lb
             else if(new_dport == bpf_htons(6767)  && _is_client_ip(bpf_ntohl(old_saddr) ) ){
               bpf_printk("debug: in B");

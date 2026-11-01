@@ -196,7 +196,9 @@ int load_balance(struct xdp_md* ctx) {
                 new_daddr = *p_daddr;
 
                 // 5. dmac -> client_n mac
-                __u8 mac[6] = _get_client_mac(new_daddr);
+                __u8* mac = _get_mac(new_daddr);
+                if(!mac)
+                  return XDP_PASS;
                 __builtin_memcpy(dest_mac, mac, 6);
 
                 // 6. smac -> LB_mac
@@ -211,7 +213,7 @@ int load_balance(struct xdp_md* ctx) {
                 new_dport = bpf_htons(BACKEND_PORT);
               // 2. sport -> stays the same - EPHEMERAL PORT
                 // but we save mapping port -> client ip
-                _set_client_ip(new_sport, old_saddr);
+                _set_connection_ip(new_sport, old_saddr);
               
               // 3. sip -> LB_ip - done below
 
